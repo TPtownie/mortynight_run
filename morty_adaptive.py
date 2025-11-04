@@ -5,8 +5,19 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from collections import deque
 
+# ==================== CONFIGURATION ====================
 API_TOKEN = "a4693c12a3de0cd5ceb3f6cb742f45747c9cbd88"
 BASE_URL = "https://challenge.sphinxhq.com"
+
+# Debug settings
+PROGRESS_PRINT_FREQUENCY = 10  # Print stats every N steps (10 = more detail, 50 = less spam)
+VERBOSE_MODE = True            # Show individual trip results
+
+# Algorithm parameters
+WINDOW_SIZE = 30               # Number of recent trips to track per planet
+EXPLORATION_RATE = 0.15        # 15% exploration, 85% exploitation
+INITIAL_EXPLORATION = 10       # Initial trips per planet before adapting
+# ========================================================
 
 headers = {
     "Authorization": f"Bearer {API_TOKEN}",
@@ -138,10 +149,14 @@ def run_adaptive_episode():
     """Run an episode using adaptive planet selection"""
     print(f"\n{'='*70}")
     print(f"🚀 Starting ADAPTIVE episode - Multi-Armed Bandit Strategy")
+    print(f"{'='*70}")
+    print(f"⚙️  Config: Window={WINDOW_SIZE}, Exploration={EXPLORATION_RATE*100:.0f}%, Initial={INITIAL_EXPLORATION}")
+    print(f"📊 Debug: Progress every {PROGRESS_PRINT_FREQUENCY} steps, Verbose={VERBOSE_MODE}")
     print(f"{'='*70}\n")
 
-    # Initialize router
-    router = AdaptivePlanetRouter(window_size=30, exploration_rate=0.15)
+    # Initialize router with config parameters
+    router = AdaptivePlanetRouter(window_size=WINDOW_SIZE, exploration_rate=EXPLORATION_RATE)
+    router.initial_exploration_per_planet = INITIAL_EXPLORATION
 
     # Start new episode
     start_episode()
@@ -186,14 +201,19 @@ def run_adaptive_episode():
 
         step += 1
 
-        # Print progress every 50 steps
-        if step % 50 == 0:
+        # Verbose mode: print each trip
+        if VERBOSE_MODE and step <= 30:
+            print(f"  Trip {step}: Planet {planet_index} [{router.planet_names[planet_index]}] - {'✅ SUCCESS' if result['survived'] else '❌ FAILED'} (Saved: {result['morties_on_planet_jessica']}/{1000 - result['morties_in_citadel']})")
+
+        # Print progress every N steps (configurable)
+        if step % PROGRESS_PRINT_FREQUENCY == 0:
             stats = router.get_stats()
             best_planet, success_rates = router.get_best_planet()
 
             print(f"\n📊 Step {step} Progress:")
             print(f"   Saved: {result['morties_on_planet_jessica']}, Lost: {result['morties_lost']}, Remaining: {result['morties_in_citadel']}")
             print(f"   Current success rate: {result['morties_on_planet_jessica'] / (1000 - result['morties_in_citadel']) * 100:.1f}%")
+            print(f"   Last trip: Planet {planet_index} - {'✅ SUCCESS' if result['survived'] else '❌ FAILED'}")
             print(f"\n   Recent Planet Performance (last {router.window_size} trips):")
             for i in range(3):
                 s = stats[i]
