@@ -37,7 +37,18 @@ def send_morties(planet_index, morty_count):
     """Send morties through a portal"""
     payload = {"planet": planet_index, "morty_count": morty_count}
     response = requests.post(f"{BASE_URL}/api/mortys/portal/", headers=headers, json=payload)
-    return response.json()
+    if response.status_code != 200:
+        print(f"\n❌ API Error on send_morties:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Response: {response.text}")
+        return None
+    try:
+        return response.json()
+    except json.JSONDecodeError as e:
+        print(f"\n❌ JSON Decode Error on send_morties:")
+        print(f"   Response text: {response.text}")
+        print(f"   Error: {e}")
+        return None
 
 def get_status():
     """Get current episode status"""
@@ -119,6 +130,11 @@ def run_pattern():
 
         # Small delay after API call to avoid rate limiting
         time.sleep(0.05)
+
+        # Handle API errors
+        if result is None:
+            print(f"\n⚠️  API error on send_morties. Saving partial results...")
+            break
 
         # Record result
         survived = result['survived']
