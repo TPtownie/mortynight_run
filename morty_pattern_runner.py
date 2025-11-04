@@ -42,7 +42,18 @@ def send_morties(planet_index, morty_count):
 def get_status():
     """Get current episode status"""
     response = requests.get(f"{BASE_URL}/api/mortys/status/", headers=headers)
-    return response.json()
+    if response.status_code != 200:
+        print(f"\n❌ API Error on status check:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Response: {response.text}")
+        return None
+    try:
+        return response.json()
+    except json.JSONDecodeError as e:
+        print(f"\n❌ JSON Decode Error:")
+        print(f"   Response text: {response.text}")
+        print(f"   Error: {e}")
+        return None
 
 def run_pattern():
     """Run with configured pattern"""
@@ -79,6 +90,11 @@ def run_pattern():
     while True:
         # Get current status
         status = get_status()
+
+        # Handle API errors
+        if status is None:
+            print(f"\n⚠️  API error occurred. Saving partial results...")
+            break
 
         # Check if done
         if status['morties_in_citadel'] == 0:
@@ -160,25 +176,39 @@ def run_pattern():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"morty_pattern_{timestamp}.json"
 
+    # Prepare final status (handle case where API failed)
+    final_status = {}
+    if status and all_results:
+        final_status = {
+            'morties_on_jessica': status.get('morties_on_planet_jessica', all_results[-1]['morties_on_jessica']),
+            'morties_lost': status.get('morties_lost', all_results[-1]['morties_lost']),
+            'steps_taken': status.get('steps_taken', len(all_results))
+        }
+    elif all_results:
+        # Use last result if status is None
+        final_status = {
+            'morties_on_jessica': all_results[-1]['morties_on_jessica'],
+            'morties_lost': all_results[-1]['morties_lost'],
+            'steps_taken': len(all_results)
+        }
+
     with open(filename, 'w') as f:
         json.dump({
             'pattern': PLANET_PATTERN,
             'morties_per_trip': MORTIES_PER_TRIP,
             'results': all_results,
             'planet_stats': planet_stats,
-            'final_status': {
-                'morties_on_jessica': status['morties_on_planet_jessica'],
-                'morties_lost': status['morties_lost'],
-                'steps_taken': status['steps_taken']
-            }
+            'final_status': final_status,
+            'completed': status is not None and status.get('morties_in_citadel', 1) == 0
         }, f, indent=2)
 
     print(f"💾 Results saved to: {filename}\n")
 
-    # Generate visualization
-    print(f"📊 Generating visualization...")
-    png_filename = create_visualization(all_results, planet_stats, timestamp)
-    print(f"📈 Visualization saved to: {png_filename}\n")
+    # Generate visualization if we have results
+    if all_results:
+        print(f"📊 Generating visualization...")
+        png_filename = create_visualization(all_results, planet_stats, timestamp)
+        print(f"📈 Visualization saved to: {png_filename}\n")
 
     return all_results, planet_stats
 
