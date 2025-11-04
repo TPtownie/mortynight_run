@@ -41,8 +41,10 @@ def display_status(status):
     print(f"  ✅ Morties on Jessica: {status['morties_on_planet_jessica']} ({status['morties_on_planet_jessica']/10:.1f}%)")
     print(f"  💀 Morties Lost: {status['morties_lost']}")
     print(f"  🎯 Steps Taken: {status['steps_taken']}")
-    if status['morties_in_citadel'] > 0:
-        success_rate = status['morties_on_planet_jessica'] / (1000 - status['morties_in_citadel']) * 100
+
+    trips_taken = 1000 - status['morties_in_citadel']
+    if trips_taken > 0:
+        success_rate = status['morties_on_planet_jessica'] / trips_taken * 100
         print(f"  📈 Success Rate: {success_rate:.1f}%")
     print(f"{'='*70}\n")
 
