@@ -91,6 +91,9 @@ def run_pattern():
         # Get current status
         status = get_status()
 
+        # Small delay after status check
+        time.sleep(0.05)
+
         # Handle API errors
         if status is None:
             print(f"\n⚠️  API error occurred. Saving partial results...")
@@ -113,6 +116,9 @@ def run_pattern():
         # Send morties
         morties_to_send = min(MORTIES_PER_TRIP, status['morties_in_citadel'])
         result = send_morties(planet_index, morties_to_send)
+
+        # Small delay after API call to avoid rate limiting
+        time.sleep(0.05)
 
         # Record result
         survived = result['survived']
