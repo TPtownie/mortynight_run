@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import matplotlib.pyplot as plt
 from datetime import datetime
 
 # ==================== CONFIGURATION ====================
@@ -174,7 +175,119 @@ def run_pattern():
 
     print(f"💾 Results saved to: {filename}\n")
 
+    # Generate visualization
+    print(f"📊 Generating visualization...")
+    png_filename = create_visualization(all_results, planet_stats, timestamp)
+    print(f"📈 Visualization saved to: {png_filename}\n")
+
     return all_results, planet_stats
+
+def create_visualization(all_results, planet_stats, timestamp):
+    """Create visualization of the pattern run"""
+    colors = ['#FF6B6B', '#4ECDC4', '#95E1D3']
+    planet_names_short = ['Planet A', 'Planet B', 'Planet C']
+
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    fig.suptitle(f'Pattern Run: {PLANET_PATTERN} (Morties/Trip: {MORTIES_PER_TRIP})',
+                 fontsize=16, fontweight='bold')
+
+    # Plot 1: Success Rate Over Time
+    ax1 = axes[0, 0]
+    steps = [r['step'] for r in all_results]
+    # Calculate cumulative success rate
+    cumulative_rates = []
+    for i, r in enumerate(all_results):
+        trips_so_far = i + 1
+        successes = sum(1 for x in all_results[:i+1] if x['survived'])
+        cumulative_rates.append(successes / trips_so_far * 100)
+
+    ax1.plot(steps, cumulative_rates, color='#2E86AB', linewidth=2)
+    ax1.set_xlabel('Step Number')
+    ax1.set_ylabel('Success Rate (%)')
+    ax1.set_title('Cumulative Success Rate Over Time')
+    ax1.grid(True, alpha=0.3)
+    ax1.axhline(y=50, color='r', linestyle='--', alpha=0.5, label='50% baseline')
+    ax1.legend()
+
+    # Plot 2: Planet Usage Over Time
+    ax2 = axes[0, 1]
+    planet_choices = [r['planet'] for r in all_results]
+    for planet_idx in range(3):
+        planet_steps = [i for i, p in enumerate(planet_choices) if p == planet_idx]
+        planet_y = [planet_idx] * len(planet_steps)
+        ax2.scatter(planet_steps, planet_y, color=colors[planet_idx],
+                   label=planet_names_short[planet_idx], alpha=0.6, s=10)
+
+    ax2.set_xlabel('Step Number')
+    ax2.set_ylabel('Planet Used')
+    ax2.set_yticks([0, 1, 2])
+    ax2.set_yticklabels(planet_names_short)
+    ax2.set_title('Planet Selection Pattern')
+    ax2.legend(loc='upper right', fontsize=8)
+    ax2.grid(True, alpha=0.3, axis='x')
+
+    # Plot 3: Planet Performance
+    ax3 = axes[1, 0]
+    planets_used = [p for p in range(3) if planet_stats[p]['attempts'] > 0]
+    if planets_used:
+        success_rates = []
+        for p in planets_used:
+            rate = planet_stats[p]['successes'] / planet_stats[p]['attempts'] * 100
+            success_rates.append(rate)
+
+        bars = ax3.bar([planet_names_short[p] for p in planets_used],
+                      success_rates,
+                      color=[colors[p] for p in planets_used])
+        ax3.set_ylabel('Success Rate (%)')
+        ax3.set_title('Success Rate by Planet')
+        ax3.set_ylim([0, 100])
+        ax3.grid(True, alpha=0.3, axis='y')
+
+        # Add value labels
+        for bar, rate, p in zip(bars, success_rates, planets_used):
+            height = bar.get_height()
+            attempts = planet_stats[p]['attempts']
+            successes = planet_stats[p]['successes']
+            ax3.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{rate:.1f}%\n({successes}/{attempts})',
+                    ha='center', va='bottom', fontweight='bold')
+
+    # Plot 4: Summary Stats
+    ax4 = axes[1, 1]
+    ax4.axis('off')
+
+    final_result = all_results[-1]
+    total_trips = len(all_results)
+    successful_trips = sum(1 for r in all_results if r['survived'])
+
+    summary_text = f"PATTERN RUN SUMMARY\n\n"
+    summary_text += f"Pattern: {PLANET_PATTERN}\n"
+    summary_text += f"Morties/Trip: {MORTIES_PER_TRIP}\n\n"
+    summary_text += f"Final Score: {final_result['morties_on_jessica']}/1000\n"
+    summary_text += f"  ({final_result['morties_on_jessica']/10:.1f}%)\n\n"
+    summary_text += f"Morties Lost: {final_result['morties_lost']}\n"
+    summary_text += f"Total Trips: {total_trips}\n"
+    summary_text += f"Successful Trips: {successful_trips}/{total_trips}\n"
+    summary_text += f"  ({successful_trips/total_trips*100:.1f}%)\n\n"
+
+    summary_text += "Planet Usage:\n"
+    for p in range(3):
+        if planet_stats[p]['attempts'] > 0:
+            rate = planet_stats[p]['successes'] / planet_stats[p]['attempts'] * 100
+            summary_text += f"  {planet_names_short[p]}: {planet_stats[p]['attempts']} trips "
+            summary_text += f"({rate:.1f}%)\n"
+
+    ax4.text(0.1, 0.9, summary_text, transform=ax4.transAxes,
+             fontsize=11, verticalalignment='top', fontfamily='monospace',
+             bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.3))
+
+    plt.tight_layout()
+
+    png_filename = f"morty_pattern_{timestamp}.png"
+    plt.savefig(png_filename, dpi=300, bbox_inches='tight')
+    plt.close()
+
+    return png_filename
 
 def main():
     print("\n" + "="*70)
