@@ -13,6 +13,11 @@ BASE_URL = "https://challenge.sphinxhq.com"
 PROGRESS_PRINT_FREQUENCY = 10
 VERBOSE_MODE = True
 
+# Trip settings
+MORTIES_PER_TRIP = 3  # 1, 2, or 3 (API allows these values)
+                      # Lower values = faster pattern detection but more API calls
+                      # 3 = fastest completion, 1 = most granular detection
+
 # NEW STRATEGY: Pattern Detection
 SHORT_WINDOW = 10    # Detect recent performance quickly (for Planet 1 oscillations)
 PHASE_THRESHOLD = 0.6  # If > 60% in last 10 trips, it's a HIGH phase
@@ -178,7 +183,7 @@ def run_pattern_detector():
     print(f"\n{'='*70}")
     print(f"🎯 PATTERN DETECTOR - Exploiting Oscillations")
     print(f"{'='*70}")
-    print(f"⚙️  Config: Short Window={SHORT_WINDOW}, Phase Threshold={PHASE_THRESHOLD*100:.0f}%")
+    print(f"⚙️  Config: Window={SHORT_WINDOW}, Threshold={PHASE_THRESHOLD*100:.0f}%, Morties/Trip={MORTIES_PER_TRIP}")
     print(f"📊 Strategy: Detect Planet 1 oscillations and ride the wave!")
     print(f"{'='*70}\n")
 
@@ -205,8 +210,8 @@ def run_pattern_detector():
         # Choose planet using pattern detection
         planet_index = detector.choose_planet(step)
 
-        # Send morties
-        morties_to_send = min(3, status['morties_in_citadel'])
+        # Send morties (configurable count)
+        morties_to_send = min(MORTIES_PER_TRIP, status['morties_in_citadel'])
         result = send_morties(planet_index, morties_to_send)
 
         # Record result

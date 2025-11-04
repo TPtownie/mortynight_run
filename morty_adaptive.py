@@ -13,6 +13,10 @@ BASE_URL = "https://challenge.sphinxhq.com"
 PROGRESS_PRINT_FREQUENCY = 10  # Print stats every N steps (10 = more detail, 50 = less spam)
 VERBOSE_MODE = True            # Show individual trip results
 
+# Trip settings
+MORTIES_PER_TRIP = 3           # 1, 2, or 3 (API allows these values)
+                               # Lower = faster pattern detection but more API calls
+
 # Algorithm parameters
 WINDOW_SIZE = 30               # Number of recent trips to track per planet
 EXPLORATION_RATE = 0.15        # 15% exploration, 85% exploitation
@@ -150,7 +154,7 @@ def run_adaptive_episode():
     print(f"\n{'='*70}")
     print(f"🚀 Starting ADAPTIVE episode - Multi-Armed Bandit Strategy")
     print(f"{'='*70}")
-    print(f"⚙️  Config: Window={WINDOW_SIZE}, Exploration={EXPLORATION_RATE*100:.0f}%, Initial={INITIAL_EXPLORATION}")
+    print(f"⚙️  Config: Window={WINDOW_SIZE}, Exploration={EXPLORATION_RATE*100:.0f}%, Initial={INITIAL_EXPLORATION}, Morties/Trip={MORTIES_PER_TRIP}")
     print(f"📊 Debug: Progress every {PROGRESS_PRINT_FREQUENCY} steps, Verbose={VERBOSE_MODE}")
     print(f"{'='*70}\n")
 
@@ -180,8 +184,8 @@ def run_adaptive_episode():
         # Choose planet adaptively
         planet_index = router.choose_planet(step)
 
-        # Send morties (3 or whatever is left)
-        morties_to_send = min(3, status['morties_in_citadel'])
+        # Send morties (configurable count)
+        morties_to_send = min(MORTIES_PER_TRIP, status['morties_in_citadel'])
         result = send_morties(planet_index, morties_to_send)
 
         # Record result
